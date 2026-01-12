@@ -62,13 +62,20 @@ def test_environment():
                     print(f"    Task {task_id} test data: {test_file.exists()}")
                     
                     if test_file.exists():
-                        # Compter les samples
-                        with open(test_file, 'r') as f:
-                            data = json.load(f)
-                            if isinstance(data, list):
-                                print(f"      → {len(data)} samples")
-                            else:
-                                print(f"      → 1 sample (dict format)")
+                        # Compter les samples (supporter JSON et JSONL)
+                        try:
+                            with open(test_file, 'r') as f:
+                                # Essayer JSON standard
+                                data = json.load(f)
+                                if isinstance(data, list):
+                                    print(f"      → {len(data)} samples (JSON)")
+                                else:
+                                    print(f"      → 1 sample (JSON)")
+                        except json.JSONDecodeError:
+                            # Format JSONL (une ligne par sample)
+                            with open(test_file, 'r') as f:
+                                lines = f.readlines()
+                                print(f"      → {len(lines)} samples (JSONL)")
     
     # Test GPU
     print("\n" + "="*60)
