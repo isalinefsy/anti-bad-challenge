@@ -22,5 +22,9 @@ ckpts/
 *.pth
 *.pt
 
+.venv/
+
 # LLM API keys and environment variables
 .env
+
+.venv
