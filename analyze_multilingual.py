@@ -43,13 +43,28 @@ def load_multilingual_model(model_path: str, use_4bit: bool = True):
     print(f"Loading model: {model_path}")
     print(f"{'='*60}")
     
-    # Charger la config pour trouver le modèle de base
+    # Charger la config pour trouver le modèle de base et le nombre de labels
     config_path = Path(model_path) / "adapter_config.json"
     with open(config_path) as f:
-        config = json.load(f)
+        adapter_config = json.load(f)
     
-    base_model_name = config.get("base_model_name_or_path")
+    base_model_name = adapter_config.get("base_model_name_or_path")
     print(f"Base model: {base_model_name}")
+    
+    # Détecter le nombre de labels depuis les modules_to_save
+    num_labels = 2  # Default
+    if "modules_to_save" in adapter_config:
+        # Charger un poids pour détecter la dimension
+        model_files = list(Path(model_path).glob("adapter_model*.safetensors"))
+        if model_files:
+            from safetensors import safe_open
+            with safe_open(model_files[0], framework="pt", device="cpu") as f:
+                for key in f.keys():
+                    if "score" in key and "weight" in key:
+                        weight_shape = f.get_tensor(key).shape
+                        num_labels = weight_shape[0]
+                        print(f"Detected {num_labels} labels from model weights")
+                        break
     
     # Configuration quantification
     if use_4bit:
@@ -71,7 +86,7 @@ def load_multilingual_model(model_path: str, use_4bit: bool = True):
         quantization_config=bnb_config,
         device_map="auto",
         trust_remote_code=True,
-        num_labels=2  # Binary classification
+        num_labels=num_labels
     )
     
     # Charger les adapters LoRA
@@ -213,14 +228,18 @@ def analyze_multilingual_task(task_id: int, base_path: Path, output_path: Path,
                 pred = logits.argmax(dim=-1).item()
                 probs = torch.softmax(logits, dim=-1)[0].cpu().tolist()
                 
-                predictions.append({
+                pred_dict = {
                     'index': idx,
                     'text_preview': text[:100],
                     'prediction': pred,
-                    'prob_class_0': probs[0],
-                    'prob_class_1': probs[1],
                     'confidence': max(probs)
-                })
+                }
+                
+                # Ajouter les probabilités pour chaque classe
+                for class_idx, prob in enumerate(probs):
+                    pred_dict[f'prob_class_{class_idx}'] = prob
+                
+                predictions.append(pred_dict)
                 
                 if (idx + 1) % 50 == 0:
                     print(f"  Processed {idx + 1}/{len(test_data)} samples")
