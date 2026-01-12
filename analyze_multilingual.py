@@ -120,13 +120,24 @@ def analyze_multilingual_task(task_id: int, base_path: Path, output_path: Path,
         print("ERROR: Required files not found!")
         return None
     
-    # Charger les données de test
+    # Charger les données de test (supporter JSON et JSONL)
     print(f"\nLoading test data...")
-    with open(test_data_path, 'r') as f:
-        test_data = json.load(f)
+    test_data = []
     
-    if isinstance(test_data, dict):
-        test_data = [test_data]
+    try:
+        # Essayer JSON standard
+        with open(test_data_path, 'r') as f:
+            data = json.load(f)
+            if isinstance(data, list):
+                test_data = data
+            else:
+                test_data = [data]
+    except json.JSONDecodeError:
+        # Format JSONL (une ligne par sample)
+        with open(test_data_path, 'r') as f:
+            for line in f:
+                if line.strip():
+                    test_data.append(json.loads(line))
     
     if max_samples:
         test_data = test_data[:max_samples]
