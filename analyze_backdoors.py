@@ -272,12 +272,22 @@ def main():
     track = "classification-track"
     task_id = 1
     
-    model_dir = base_path / track / f"task{task_id}"
-    test_data = base_path / track / f"task{task_id}_test.jsonl"
+    # CHEMINS CORRIGÉS selon la vraie structure
+    model_dir = base_path / track / "models" / f"task{task_id}"
+    test_data = base_path / track / "data" / f"task{task_id}" / "test.json"
     
     model1_path = model_dir / "model1"
     model2_path = model_dir / "model2"
     model3_path = model_dir / "model3"
+    
+    # Vérifier que les chemins existent
+    print(f"\nChecking paths...")
+    print(f"Model dir: {model_dir} - Exists: {model_dir.exists()}")
+    print(f"Test data: {test_data} - Exists: {test_data.exists()}")
+    
+    if not test_data.exists():
+        print(f"ERROR: Test data not found at {test_data}")
+        return
     
     output_dir = output_path / f"analysis_{track}_task{task_id}"
     
